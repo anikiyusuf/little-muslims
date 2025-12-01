@@ -1,0 +1,55 @@
+services:
+
+  muslim_tech-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: muslim_tech-api:1.0.0
+    container_name: muslim_tech-api
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    depends_on:
+      muslim_tech-db:
+        condition: service_healthy
+      muslim_tech-redis:
+          condition: service_healthy
+    restart: unless-stopped
+
+  muslim_tech-db:
+    image: postgres:latest
+    container_name: muslim_tech-db
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=muslim_tech
+    volumes:
+    - postgres_volume:/var/lib/postgresql/data
+    - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+  muslim_tech-redis:
+    image: redis:6.2.4-alpine
+    container_name: muslim_tech-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_volume:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+      postgres_volume:
+      redis_volume:
