@@ -16,15 +16,15 @@ import (
 
 func StartQueue(redisAddr, user, pass string,  worker *workers.Worker, logger *zap.SugaredLogger){
 srv := asynq.NewServer(
-   asynq.RedisClientOpt{
+	asynq.RedisClientOpt{
 	Addr: redisAddr,
 	Username: user,
 	Password: pass,
-   },
-   asynq.Config{
+},
+	asynq.Config{
 	Concurrency: 10, 
 
-   },
+},
 )
 
 
