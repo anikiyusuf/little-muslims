@@ -96,3 +96,38 @@ func (a *AuthService) Register(ctx context.Context, input types.RegisterUserInpu
 	nil
 }
 
+
+func (a *AuthService) VerifyEmail(ctx context.Context, input types.VerifyUserInput) (types.LoginOutput, error) {
+	email, err := a.cache.GetVerificationCode(ctx, input.Token)
+    if err != nil {
+		return types.LoginOutput{}, ErrInvalidCode
+	}
+
+	if email != input.Email {
+		return types.LoginOutput{}, ErrInvalidCode
+	}
+	user, err := a.repo.GetUserByEmail(ctx, input.Email)
+	if err != nil {
+		return types.LoginOutput{}, ErrUserNotFound
+	}
+
+	err = a.repo.UpdateUserVerified(ctx, repository.UpdateUserVerifiedParams{
+		ID: user.ID,
+		IsVerified: true,
+	})
+
+	if err != nil {
+		return types.LoginOutput{}, ErrUserNotFound
+	}
+
+	token, err := a.jwt.GenerateToken(user.ID)
+	if err != nil {
+		return types.LoginOutput{}, ErrGenerateToken
+	}
+
+	return types.LoginOutput{
+		AccessToken: token,
+	}, nil
+
+}
+

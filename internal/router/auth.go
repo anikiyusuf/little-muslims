@@ -19,4 +19,5 @@ func RegisterPublicAuthRoutes(api *gin.RouterGroup, app *boostrap.Application) {
 	authHandler := handler.NewAuthHandler(authService, app.Cache, *app.Config)
 
 	api.POST(authPrefix+"/register", authHandler.RegisterUser)
+    api.POST(authPrefix+"/verify-token", authHandler.VerifyUser)
 }

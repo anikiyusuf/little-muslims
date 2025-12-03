@@ -10,18 +10,17 @@ import (
 )
 
 const (
-	templateDir 	  = "templates/"
-	VerificationEmail = "verification.tmpl"
-	ResetPassword     = "reset_password.tmpl"
-	InvitationEmail   =  "invitation.tmpl"
+	templateDir 	  =  "templates/"
+	VerificationEmail =  "verification.tmpl"
+	ResetPassword     =  "reset_password.tmpl"
 )
 
-
+//go:embed "templates/*"
 var FS embed.FS
 
 
 type EmailProvider interface {
-	SendEmail(to, sbject, body string) error
+	SendEmail(to, subject, body string) error
 }
 type Client interface {
 	Send(templateFile, email string, data any, isSandbox bool)(int error)
@@ -30,7 +29,7 @@ type Client interface {
 
 type EmailClient struct {
 	Provider EmailProvider
-	F5      embed.FS
+	F5       embed.FS
 	logger  *zap.SugaredLogger
 }
 
@@ -51,7 +50,7 @@ func (e *EmailClient) Send(templateFile, email string, data any, isSandbox bool)
 		}
 		
 		subject := new(bytes.Buffer)
-		err = tmpl.ExecuteTemplate(subject, "subjects", data)
+		err = tmpl.ExecuteTemplate(subject, "subject", data)
 		if err != nil {
 			return -1, err
 		}

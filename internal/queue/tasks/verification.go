@@ -18,18 +18,17 @@ const (
 var log *zap.SugaredLogger = logger.CreateZapLogger()
 
 type VerificationEmailPayload struct {
-	FirstName string `json:"first_name"`
+	FirstName string  `json:"first_name"`
 	Email     string  `json:"email"`
-	Code      string   `json:"code"`
+	Code      string  `json:"code"`
 }
 
-func (q *Queue) EnqueueSendVerificationEmail(email, firstName, code string, delay time.Duration) error{
+func (q *Queue) EnqueueSendVerificationEmail(email, firstName, code string, delay time.Duration) error {
 	payload, err := json.Marshal(VerificationEmailPayload{FirstName: firstName, Code: code, Email: email})
 	if err != nil {
 		log.Errorw("failed to marshal payload","error", err)
 		return fmt.Errorf("failed to marshal payload: %w", err)
 	}
-
 	task := asynq.NewTask(TaskSendVerificationEmail, payload)
 
 	var opts []asynq.Option

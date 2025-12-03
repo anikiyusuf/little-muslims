@@ -43,3 +43,26 @@ func (a *AuthHandler) RegisterUser(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, user)
 }
+
+func (a *AuthHandler) VerifyUser(c *gin.Context){
+	var input types.VerifyUserInput
+	if  err := c.ShouldBindJSON(&input); err != nil {
+		httpx.BadRequestResponse(c, err)
+	}
+
+	token, err := a.authService.VerifyEmail(c.Request.Context(), input)
+	if err != nil {
+		if err == service.ErrInvalidCode{
+			httpx.BadRequestResponse(c, err)	
+		} else if err == service.ErrUserNotFound {
+			httpx.BadRequestResponse(c, err)
+		} else {
+			httpx.InternalServerError(c, err)
+		}
+
+		return 
+	}
+
+	httpx.OkResponse(c, "user verified successfully", token)
+}
+
