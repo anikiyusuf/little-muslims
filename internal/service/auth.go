@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -131,3 +132,142 @@ func (a *AuthService) VerifyEmail(ctx context.Context, input types.VerifyUserInp
 
 }
 
+
+func (a *AuthService) ResendVerificationCode(ctx context.Context, email string) error {
+	user, err := a.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
+	userDetails, err := a.getUserDetails(ctx, user)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
+	if user.IsVerified {
+		return ErrUserAlreadyVerified
+	}
+
+	verificationCode := utils.Generate6DigitCode()
+
+	err = a.cache.SetVerificationCode(ctx, verificationCode, email)
+	if err != nil {
+	return ErrSetVerification 
+	}
+
+	a.queue.EnqueueSendVerificationEmail(email, userDetails.FirstName, verificationCode, 0)
+return nil
+}
+
+
+type getUserDetails struct {
+	FirstName string
+	LastName  string
+	Email     string
+}
+
+func (a *AuthService) getUserDetails(ctx context.Context, user interface{}) (getUserDetails, error) {
+	var details getUserDetails
+	var email string
+	// var userID *uuid.UUID
+
+	switch u := user.(type) {
+
+	case repository.GetUserByEmailRow:
+		email = u.Email
+		details = getUserDetails{
+			FirstName: u.FirstName,
+			LastName:  u.LastName,
+			Email:     email,
+		}
+
+	case repository.GetUserByIDRow:
+		email = u.Email
+		details = getUserDetails{
+			FirstName: u.FirstName,
+			LastName:  u.LastName,
+			Email:     email,
+		}
+
+	default:
+		return getUserDetails{}, errors.New("unknown user type")
+	}
+
+	return details, nil
+}
+
+
+
+
+func (a *AuthService) Login(ctx context.Context, input types.LoginInput) (types.LoginOutput, error ) {
+	user, err := a.repo.GetUserByEmail(ctx, input.Email)
+	if err != nil {
+		return types.LoginOutput{}, ErrInvalidCredential
+	}
+
+	if !user.IsVerified {
+		return types.LoginOutput{}, ErrUserNotVerified
+	}
+
+	if err := utils.CheckPasswordHash(input.Password, user.PasswordHash); err != nil {
+        return types.LoginOutput{}, ErrInvalidCredential
+	}
+
+	token, err := a.jwt.GenerateToken(user.ID)
+	if err != nil {
+		return types.LoginOutput{}, ErrGenerateToken
+	}
+
+	return types.LoginOutput{
+		AccessToken: token,
+	}, nil
+
+}
+
+
+func (a *AuthService) ForgotPassword(ctx context.Context, email string) error {
+	user, err := a.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
+	userDetails, err := a.getUserDetails(ctx, user)
+	if err != nil {
+		return ErrUserNotFound
+	}
+	resetPasswordCode := utils.Generate6DigitCode()
+
+	err = a.cache.SetResetPasswordCode(ctx, resetPasswordCode, email)
+    if err != nil {
+		return ErrSetVerification
+	}
+	a.queue.EnqueueSendResetPasswordEmail(email, userDetails.FirstName, resetPasswordCode, 0)
+    return nil
+}
+
+
+func (a *AuthService) ResetPassword(ctx context.Context, input types.ResetPasswordInput) error {
+	email, err := a.cache.GetResetPasswordCode(ctx, input.Token)
+	if err != nil {
+		return ErrInvalidCode
+	}
+	user, err := a.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
+	passwordHash, err := utils.HashPassword(input.Password)
+    if err != nil {
+		return err
+	}
+
+	err = a.repo.UpdateUserPassword(ctx, repository.UpdateUserPasswordParams{
+		ID:	user.ID,
+		PasswordHash: passwordHash, 
+	})
+	if err != nil {
+		return ErrInvalidEmail
+	}
+
+	return nil 
+}

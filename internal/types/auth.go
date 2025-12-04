@@ -47,6 +47,6 @@ type ForgotPasswordInput struct {
 
 
 type ResetPasswordInput struct {
-    Token string `json:"token"`
-	Password string `json:"password"`
+    Token    string    `json:"token"`
+	Password string    `json:"password"`
 }
