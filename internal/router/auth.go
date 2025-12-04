@@ -20,4 +20,10 @@ func RegisterPublicAuthRoutes(api *gin.RouterGroup, app *boostrap.Application) {
 
 	api.POST(authPrefix+"/register", authHandler.RegisterUser)
     api.POST(authPrefix+"/verify-token", authHandler.VerifyUser)
+	api.POST(authPrefix+"/login", authHandler.Login)
+	api.POST(authPrefix+"/forgot-password", authHandler.ForgetPassword)
+	api.POST(authPrefix+"/reset-password", authHandler.ResetPassword)
+	// api.POST(authPrefix+"/refresh-token", authHandler.RefreshToken)
+	api.POST(authPrefix+"/resend-token", authHandler.ResendVerificationCode)
+
 }

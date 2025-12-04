@@ -66,3 +66,95 @@ func (a *AuthHandler) VerifyUser(c *gin.Context){
 	httpx.OkResponse(c, "user verified successfully", token)
 }
 
+
+func (a *AuthHandler) ResendVerificationCode(c *gin.Context) {
+	var input types.ResendVerificationInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		httpx.BadRequestResponse(c, err)
+		return
+	}
+
+	err := a.authService.ResendVerificationCode(c.Request.Context(),  input.Email)
+    if err != nil {
+		if err == service.ErrUserNotFound {
+			httpx.NotFoundResponse(c, err)
+		} else if err == service.ErrUserAlreadyVerified {
+			httpx.ConflictResponse(c, err)
+		} else {
+			httpx.InternalServerError(c, err)
+		}
+		return 
+	} 
+
+	httpx.OkResponse(c, "verification code sent successfully", nil)
+}
+
+
+
+func (a *AuthHandler) Login(c *gin.Context){
+	var input types.LoginInput
+    if err := c.ShouldBindJSON(&input); err != nil{
+		httpx.BadRequestResponse(c, err)
+		return 
+	}
+
+	token, err := a.authService.Login(c, input)
+	if err != nil {
+		switch err {
+		case service.ErrInvalidCredential:
+			httpx.UnauthorizedResponse(c, err)
+		case service.ErrUserNotVerified:
+			httpx.ForbiddenResponse(c, err)
+		default:
+			httpx.InternalServerError(c, err)
+		}
+		return 
+	}
+
+	httpx.OkResponse(c, "user logged in successfully", token)
+}
+
+
+func (a *AuthHandler) ForgetPassword(c *gin.Context){
+	var input types.ForgotPasswordInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		httpx.BadRequestResponse(c, err)
+		return 
+	}
+
+	err := a.authService.ForgotPassword(c, input.Email)
+	if err != nil {
+		if err == service.ErrUserNotFound{
+			httpx.NotFoundResponse(c, err)
+		} else {
+			httpx.InternalServerError(c, err)
+		} 
+		return 
+	}
+
+	httpx.OkResponse(c, "reset token sent successfully", nil)
+}
+
+
+
+func (a *AuthHandler) ResetPassword(c *gin.Context){
+	var input types.ResetPasswordInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		httpx.BadRequestResponse(c, err)
+		return 
+	}
+
+	err := a.authService.ResetPassword(c.Request.Context(), input)
+    if err != nil {
+		switch err {
+		case service.ErrInvalidCode:
+			httpx.BadRequestResponse(c, err)
+		case service.ErrUserNotFound:
+			httpx.BadRequestResponse(c, err)
+		default:
+			httpx.BadRequestResponse(c, err)
+		}
+		return 
+	}
+    httpx.OkResponse(c, "Password reset successfully", nil)
+}

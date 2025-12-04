@@ -8,7 +8,7 @@ import (
 
 
 const (
-	VerificationCodeKey = "email_verification_code:"
+	VerificationCodeKey = "verification_code"
 	TTL 				= time.Minute * 10
 )
 

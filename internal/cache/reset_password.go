@@ -7,7 +7,7 @@ import(
 )
 
 const (
-	ResetPasswordKey = "reset_password_code:"
+	ResetPasswordKey = "reset_password_code"
 	ResetPasswordTTL = time.Minute * 3
 )
 
@@ -33,5 +33,5 @@ func (r *RedisCache) IsTokenCorrect(ctx context.Context, token string) bool {
 
 func (r *RedisCache) GetResetPasswordTTL(ctx context.Context, key string) (time.Duration, error) {
 	key = fmt.Sprintf("%s:%s", ResetPasswordKey, key)
-	return r.TTL(ctx, key).Result()
+	return r.Client.TTL(ctx, key).Result()
 }
